@@ -96,12 +96,12 @@ An FRR Docker container template must be configured in GNS3 to enable topology c
 #### Create Input YAML
 Example for an 8-wide topology with client networks connecting to two of the T1 routers:
 ```yaml
-architecture: "TwoTierClos"
-width: 8
-internal_supernet: "10.0.0.0/25"
-loopback_supernet: "10.255.255.0/28"
-external_networks: {
-  "192.168.1.0/24": ["t1-r1"],
+architecture: "TwoTierClos"           # Used to determine which modeling class is used
+width: 8                              # How many devices per tier/layer
+internal_supernet: "10.0.0.0/25"      # Used for PtP IP address allocation between Clos tiers
+loopback_supernet: "10.255.255.0/28"  # Used for loopback address allocation
+external_networks: {                  # Used to add BGP network statements to advertise networks 
+  "192.168.1.0/24": ["t1-r1"],        # external to the Clos architecture
   "192.168.2.0/24": ["t1-r4"],
 }
 ```
