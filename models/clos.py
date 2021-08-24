@@ -192,15 +192,16 @@ class TwoTierClos:
                 self.connections += 1
 
     def add_bgp_peers(self) -> None:
+        t1_peers = [device.router_id for device in self.t1.devices]
+        t2_peers = [device.router_id for device in self.t2.devices]
+
         # Update T1 devices' BGP instances
         for device in self.t1.devices:
-            t2_peers = [device.router_id for device in self.t2.devices]
             for peer in t2_peers:
                 device.bgp.neighbors.append({"ip_address": peer, "peer_group": "T2"})
 
         # Update T2 devices' BGP instances
         for device in self.t2.devices:
-            t1_peers = [device.router_id for device in self.t1.devices]
             for peer in t1_peers:
                 device.bgp.neighbors.append({"ip_address": peer, "peer_group": "T1"})
 
