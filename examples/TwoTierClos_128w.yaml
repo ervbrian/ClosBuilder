@@ -1,0 +1,8 @@
+architecture: "TwoTierClos"
+width: 128
+internal_supernet: "10.0.0.0/17"
+loopback_supernet: "10.255.255.0/24"
+external_networks: {
+  "192.168.1.0/24": ["t1-r1"],
+  "192.168.2.0/24": ["t1-r4"],
+}
