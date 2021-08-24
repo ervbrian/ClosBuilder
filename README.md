@@ -8,7 +8,7 @@
   <p align="center">
     A tool suite for generating and deploying network configurations for Clos architectures.
     <br />
-    <a href="https://github.com/ClosBuilder/README.md"><strong>Explore the docs »</strong></a>
+    <a href="https://github.com/ervbrian/ClosBuilder/blob/master/README.md"><strong>Explore the docs »</strong></a>
     <br />
   </p>
 </p>
