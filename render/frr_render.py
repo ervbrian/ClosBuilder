@@ -8,7 +8,7 @@ def write_config_to_file(config: str, filename: str) -> None:
         f.write(config)
 
 
-def generate_zebra_config(device, output_dir):
+def generate_zebra_config(device, output_dir) -> str:
     template = """hostname {{ device.hostname}}
 {% for interface in device.interfaces %}
 {%- if interface.allocated %}
@@ -30,8 +30,10 @@ interface {{ interface.interface }}
     filename = os.path.join(output_dir, f"{device.hostname}_zebra.conf")
     write_config_to_file(config=config, filename=filename)
 
+    return config
 
-def generate_ospfd_config(device, output_dir):
+
+def generate_ospfd_config(device, output_dir) -> str:
     template = """router ospf
   max-metric router-lsa on-startup 60
 {% for network in device.ospf.networks %}
@@ -45,8 +47,10 @@ def generate_ospfd_config(device, output_dir):
     filename = os.path.join(output_dir, f"{device.hostname}_ospfd.conf")
     write_config_to_file(config=config, filename=filename)
 
+    return config
 
-def generate_bgpd_config(device, output_dir):
+
+def generate_bgpd_config(device, output_dir) -> str:
     template = """ip prefix-list ANY permit 0.0.0.0/0 le 32
 {%- if 't1' in device.hostname -%}
 {%- set sequence_number = namespace(value=10) -%}
@@ -98,8 +102,20 @@ router bgp {{ device.bgp.asn}}
     filename = os.path.join(output_dir, f"{device.hostname}_bgpd.conf")
     write_config_to_file(config=config, filename=filename)
 
+    return config
+
+
+def integrate_frr_config(
+    device, output_dir: str, zebra_config: str, ospfd_config: str, bgpd_config: str
+) -> None:
+    """Combine Zebra, ospfd and bpgd configs into an integrated FRR config file"""
+    filename = os.path.join(output_dir, f"{device.hostname}_frr.conf")
+    config = "\n".join([zebra_config, ospfd_config, bgpd_config])
+    write_config_to_file(filename=filename, config=config)
+
 
 def generate_frr_configs(device, output_dir):
-    generate_zebra_config(device, output_dir)
-    generate_ospfd_config(device, output_dir)
-    generate_bgpd_config(device, output_dir)
+    zebra_config = generate_zebra_config(device, output_dir)
+    ospfd_config = generate_ospfd_config(device, output_dir)
+    bgpd_config = generate_bgpd_config(device, output_dir)
+    integrate_frr_config(device, output_dir, zebra_config, ospfd_config, bgpd_config)
