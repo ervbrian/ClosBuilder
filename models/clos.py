@@ -150,8 +150,8 @@ class TwoTierClos:
         print(f"Total Unused Internal Subnets: {len(self.internal_subnets)}")
         print(f"Total Unused Loopbacks: {len(self.loopbacks)}")
         print(
-            f"Total CLient Facing Ports: {(len(self.t1.devices[0].interfaces) - 1) * len(self.t1.devices) // 2}"
-        )
+            f"Total Client Facing Ports: {(len(self.t1.devices[0].interfaces) - 1) * self.width // 2}"
+        )  # -1 to account for loopback
         print()
 
     def allocate_ptp_subnet(self):
