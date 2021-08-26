@@ -81,13 +81,22 @@ def shift_ospf(router: str, direction: str, container_client: DockerClient) -> N
 
 
 def stage_frr_configs(router: str, frr_config, container_client: DockerClient) -> None:
+    """Deploy FRR configurations to router"""
     print(f"Staging frr.conf on {router}")
     with open(frr_config, "r") as f:
-        configs = f.read().splitlines()
-        for line in configs:
-            container_client.exec_run(
-                cmd=["sh", "-c", f"echo {line} >> /etc/frr/frr.conf"]
-            )
+        config = f.read()
+
+    # Convert to byte string before executing echo command on container
+    encoded_config = bytes(config, "utf-8")
+
+    # Convert byte string back to UTF8 before dumping to frr.conf
+    container_client.exec_run(
+        cmd=[
+            "sh",
+            "-c",
+            f"echo {encoded_config} | iconv -f utf8 >> /etc/frr/frr.conf",
+        ]
+    )
 
 
 def overwrite_vtysh_configs(router: str, countainer_client: DockerClient) -> None:
