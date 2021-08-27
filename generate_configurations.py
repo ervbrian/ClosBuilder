@@ -58,6 +58,7 @@ if __name__ == "__main__":
     if model_class:
         architecture_model = model_class(
             width=network_details.get("width"),
+            device_interface_count=network_details.get("device_interface_count"),
             internal_supernet=network_details.get("internal_supernet"),
             loopback_supernet=network_details.get("loopback_supernet"),
             external_networks=network_details.get("external_networks"),

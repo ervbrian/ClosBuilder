@@ -1,5 +1,6 @@
 architecture: "TwoTierClos"
 width: 32
+device_interface_count: 64
 internal_supernet: "10.0.0.0/21"
 loopback_supernet: "10.255.255.0/26"
 external_networks: {

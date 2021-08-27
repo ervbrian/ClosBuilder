@@ -34,6 +34,7 @@ class Device:
     def __init__(self, hostname: str, interface_count: int, loopback: str) -> None:
         self.hostname = hostname
         self.router_id = str(loopback.hosts()[0])
+        self.interface_count = interface_count
         self.__interface_names = [f"eth{i}" for i in range(interface_count)]
         self.interfaces = [
             Interface(interface=interface) for interface in self.__interface_names
@@ -49,10 +50,24 @@ class Device:
         self.ospf = OspfInstance(instance_id=0, networks=[loopback])
         self.bgp = BgpInstance(asn=65000, neighbors=[], networks=[])
 
-    def next_available_interface(self) -> Interface:
+    @property
+    def northbound_interfaces(self) -> List[Interface]:
+        """Northbound interfaces are used for upstream connectivity
+        Eg. On a T1 device, the first half of its interfaces are used for T2 connections"""
+        end_index = self.interface_count // 2
+        return self.interfaces[:end_index]
+
+    @property
+    def southbound_interfaces(self) -> List[Interface]:
+        """Southbound interfaces are used for downstream connectivity
+        Eg. On a T1 device, the second half of its interfaces are used for client connections"""
+        start_index = self.interface_count // 2
+        return self.interfaces[start_index : self.interface_count]
+
+    def next_available_interface(self, interfaces: List[Interface]) -> Interface:
         """Iterate through each interface until an unallocated interface is found
         Set allocated to True and return Interface object"""
-        for interface in self.interfaces:
+        for interface in interfaces:
             if not interface.allocated:
                 interface.allocated = True
                 return interface
@@ -88,12 +103,19 @@ class BgpInstance:
 class ClosTier:
     """This class represents a tier or layer of network Devices in a Clos architecture"""
 
-    def __init__(self, tier_number: int, width: int, loopback_subnets: List) -> None:
+    def __init__(
+        self,
+        tier_number: int,
+        width: int,
+        device_interface_count: int,
+        loopback_subnets: List,
+    ) -> None:
         self.width = width
         self.__device_names: List[str] = [
             f"t{str(tier_number)}-r{i}" for i in range(1, width + 1)
         ]
         self.__loopback_subnets = loopback_subnets
+        self.device_interface_count = device_interface_count
         self.devices: List[Device] = self.initialize_devices()
 
     def initialize_devices(self) -> List[Device]:
@@ -104,7 +126,7 @@ class ClosTier:
             devices.append(
                 Device(
                     hostname=hostname,
-                    interface_count=self.width * 2,
+                    interface_count=self.device_interface_count,
                     loopback=loopback_ip,
                 )
             )
@@ -124,6 +146,7 @@ class TwoTierClos:
     def __init__(
         self,
         width: int,
+        device_interface_count: int,
         internal_supernet: str,
         loopback_supernet: str,
         external_networks: Dict,
@@ -134,8 +157,18 @@ class TwoTierClos:
             ip_network(internal_supernet).subnets(new_prefix=31)
         )
         self.loopbacks = list(ip_network(loopback_supernet).subnets(new_prefix=32))
-        self.t1 = ClosTier(tier_number=1, width=width, loopback_subnets=self.loopbacks)
-        self.t2 = ClosTier(tier_number=2, width=width, loopback_subnets=self.loopbacks)
+        self.t1 = ClosTier(
+            tier_number=1,
+            width=width,
+            device_interface_count=device_interface_count,
+            loopback_subnets=self.loopbacks,
+        )
+        self.t2 = ClosTier(
+            tier_number=2,
+            width=width,
+            device_interface_count=device_interface_count,
+            loopback_subnets=self.loopbacks,
+        )
         self.external_networks = external_networks
         self.add_internal_connections()
         self.add_bgp_peers()
@@ -150,8 +183,8 @@ class TwoTierClos:
         print(f"Total Unused Internal Subnets: {len(self.internal_subnets)}")
         print(f"Total Unused Loopbacks: {len(self.loopbacks)}")
         print(
-            f"Total Client Facing Ports: {(len(self.t1.devices[0].interfaces) - 1) * self.width // 2}"
-        )  # -1 to account for loopback
+            f"Total Client Facing Ports: {len(self.t1.devices[0].southbound_interfaces) * self.width // 2}"
+        )
         print()
 
     def allocate_ptp_subnet(self):
@@ -166,8 +199,12 @@ class TwoTierClos:
         for t2_device in self.t2.devices:
             for t1_device in self.t1.devices:
                 # Allocate next availbe interface on t1 and t2 devices
-                t2_interface = t2_device.next_available_interface()
-                t1_interface = t1_device.next_available_interface()
+                t2_interface = t2_device.next_available_interface(
+                    interfaces=t2_device.southbound_interfaces
+                )
+                t1_interface = t1_device.next_available_interface(
+                    interfaces=t1_device.northbound_interfaces
+                )
 
                 # Update interface descriptions
                 t2_interface.description = f"{t2_device.hostname} {t2_interface.interface} -- {t1_interface.interface} {t1_device.hostname}"
